@@ -6,6 +6,7 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
 
 class InvoicesRelationManager extends RelationManager
@@ -44,8 +45,10 @@ class InvoicesRelationManager extends RelationManager
                     ->state(fn ($record) => $record->total - $record->amount_paid),
             ])
             ->recordActions([
-                ViewAction::make()
-                    ->url(fn ($record) => route('filament.admin.resources.invoices.view', $record)),
+                ActionGroup::make([
+                    ViewAction::make()
+                        ->url(fn ($record) => route('filament.admin.resources.invoices.view', $record)),
+                ]),
             ]);
     }
 }

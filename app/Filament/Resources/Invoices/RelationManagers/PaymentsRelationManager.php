@@ -11,8 +11,9 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Actions\EditAction;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Tables\Columns\Summarizers\Sum;
 
 class PaymentsRelationManager extends RelationManager
@@ -74,13 +75,15 @@ class PaymentsRelationManager extends RelationManager
             ])
             ->headerActions([])
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make()
-                    ->after(function ($record) {
-                        $invoice = $record->invoice;
-                        $totalPaid = $invoice->payments()->sum('amount');
-                        $invoice->update(['amount_paid' => $totalPaid]);
-                    }),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make()
+                        ->after(function ($record) {
+                            $invoice = $record->invoice;
+                            $totalPaid = $invoice->payments()->sum('amount');
+                            $invoice->update(['amount_paid' => $totalPaid]);
+                        }),
+                ]),
             ]);
     }
 }

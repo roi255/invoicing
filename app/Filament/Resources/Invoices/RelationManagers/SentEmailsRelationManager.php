@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Invoices\RelationManagers;
 
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -49,14 +50,16 @@ class SentEmailsRelationManager extends RelationManager
                     ->sortable(),
             ])
             ->recordActions([
-                Action::make('resend')
-                    ->label('Resend')
-                    ->icon(Heroicon::ArrowPath)
-                    ->color('gray')
-                    ->requiresConfirmation()
-                    ->modalDescription(fn ($record) => 'Resend the invoice email to ' . $record->recipient_email . '?')
-                    ->action(fn ($record) => $record->invoice->sendEmail())
-                    ->successNotificationTitle('Email resent successfully'),
+                ActionGroup::make([
+                    Action::make('resend')
+                        ->label('Resend')
+                        ->icon(Heroicon::ArrowPath)
+                        ->color('gray')
+                        ->requiresConfirmation()
+                        ->modalDescription(fn ($record) => 'Resend the invoice email to ' . $record->recipient_email . '?')
+                        ->action(fn ($record) => $record->invoice->sendEmail())
+                        ->successNotificationTitle('Email resent successfully'),
+                ]),
             ])
             ->headerActions([]);
     }

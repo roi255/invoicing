@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Invoices\Tables;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -74,8 +75,9 @@ class InvoicesTable
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
+                    EditAction::make(),
 
                 Action::make('mark_as_sent')
                     ->label('Send Invoice')
@@ -161,6 +163,7 @@ class InvoicesTable
                     ->modalDescription('Are you sure you want to cancel this invoice? This action cannot be undone.')
                     ->action(fn ($record) => $record->update(['status' => InvoiceStatus::Cancelled]))
                     ->successNotificationTitle('Invoice cancelled'),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
