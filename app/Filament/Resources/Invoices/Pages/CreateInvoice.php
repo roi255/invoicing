@@ -12,5 +12,12 @@ class CreateInvoice extends CreateRecord
     protected function afterCreate(): void
     {
         $this->record->recalculateTotals();
+        $this->record->markAsSent();
+        $this->record->sendEmail();
+    }
+
+    protected function getCreatedNotificationTitle(): ?string
+    {
+        return 'Invoice created and email queued for ' . $this->record->customer->email;
     }
 }

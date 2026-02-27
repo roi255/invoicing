@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
+use App\Jobs\SendInvoiceEmailJob;
 use App\Mail\InvoiceEmail;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Mail;
@@ -109,10 +110,25 @@ class Invoice extends Model
         ]);
     }
 
+    public function sentEmails(): HasMany
+    {
+        return $this->hasMany(SentEmail::class);
+    }
+
     public function sendEmail(): void
     {
-        $this->loadMissing(['customer', 'items']);
-        Mail::to($this->customer->email)->send(new InvoiceEmail($this));
+        $this->loadMissing('customer');
+
+        $subject = 'Invoice ' . $this->invoice_number . ' from ' . config('app.name');
+
+        $log = $this->sentEmails()->create([
+            'recipient_email' => $this->customer->email,
+            'subject'         => $subject,
+            'status'          => 'pending',
+            'sent_at'         => null,
+        ]);
+
+        SendInvoiceEmailJob::dispatch($this, $log);
     }
 
     public function markAsPaid(): void
