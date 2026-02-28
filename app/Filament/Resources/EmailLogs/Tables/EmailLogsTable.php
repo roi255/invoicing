@@ -13,7 +13,8 @@ class EmailLogsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->defaultSort('sent_at', 'desc')
+            ->defaultSort('created_at', 'desc')
+            ->recordClasses('!py-1')
             ->columns([
                 TextColumn::make('invoice.invoice_number')
                     ->label('Invoice #')
@@ -31,7 +32,20 @@ class EmailLogsTable
                 TextColumn::make('subject')
                     ->label('Subject')
                     ->limit(50)
-                    ->searchable(),
+                    ->searchable()
+                    ->url(fn ($record) => route('filament.admin.resources.email-logs.view', $record)),
+
+                TextColumn::make('invoice.total')
+                    ->label('Invoice Amount')
+                    ->money('usd')
+                    ->placeholder('—')
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? 'invoices') === 'invoices'),
+
+                TextColumn::make('payment.amount')
+                    ->label('Amount Paid')
+                    ->money('usd')
+                    ->placeholder('—')
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? 'invoices') === 'payments'),
 
                 TextColumn::make('status')
                     ->label('Status')
@@ -59,7 +73,7 @@ class EmailLogsTable
 
                 TextColumn::make('sent_at')
                     ->label('Sent At')
-                    ->dateTime()
+                    ->dateTime('M j, H:i')
                     ->sortable(),
             ])
             ->filters([
@@ -76,12 +90,33 @@ class EmailLogsTable
                     ->icon(Heroicon::ArrowPath)
                     ->color('gray')
                     ->requiresConfirmation()
-                    ->modalHeading('Resend Invoice Email')
-                    ->modalDescription(fn ($record) => 'Resend the invoice email to ' . $record->recipient_email . '?')
+                    ->modalHeading('Resend Email')
+                    ->modalDescription(fn ($record) => 'Resend this email to ' . $record->recipient_email . '?')
                     ->action(function ($record) {
-                        $record->invoice->sendEmail();
+                        if ($record->type === 'payment') {
+                            // Resend payment confirmation
+                            $invoice = $record->invoice;
+                            $payment = $record->payment;
+                            $isCleared = (float) $invoice->total <= (float) $invoice->amount_paid;
+                            $subject = $isCleared
+                                ? 'Payment Received — Invoice ' . $invoice->invoice_number . ' Cleared'
+                                : 'Payment Received — Invoice ' . $invoice->invoice_number;
+
+                            $log = $invoice->sentEmails()->create([
+                                'payment_id'      => $payment->id,
+                                'recipient_email' => $invoice->customer->email,
+                                'subject'         => $subject,
+                                'status'          => 'pending',
+                                'sent_at'         => null,
+                            ]);
+
+                            \App\Jobs\SendPaymentConfirmationJob::dispatch($payment, $log);
+                        } else {
+                            // Resend invoice email
+                            $record->invoice->sendEmail();
+                        }
                     })
-                    ->successNotificationTitle('Email resent successfully'),
+                    ->successNotificationTitle('Email queued for resend'),
             ]);
     }
 }

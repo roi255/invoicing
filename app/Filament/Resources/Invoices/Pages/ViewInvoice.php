@@ -88,7 +88,9 @@ class ViewInvoice extends ViewRecord
                 ->action(function (array $data) {
                     $this->record->recordPayment(
                         amount: (float) $data['amount'],
-                        method: PaymentMethod::from($data['method']),
+                        method: $data['method'] instanceof PaymentMethod
+                            ? $data['method']
+                            : PaymentMethod::from($data['method']),
                         reference: $data['reference'] ?? null,
                         date: $data['payment_date'],
                         notes: $data['notes'] ?? null,

@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Mail\InvoiceEmail;
-use App\Models\Invoice;
+use App\Mail\PaymentReceivedEmail;
+use App\Models\Payment;
 use App\Models\SentEmail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,7 +12,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
 
-class SendInvoiceEmailJob implements ShouldQueue
+class SendPaymentConfirmationJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -21,15 +21,16 @@ class SendInvoiceEmailJob implements ShouldQueue
     public int $backoff = 60;
 
     public function __construct(
-        public Invoice $invoice,
+        public Payment $payment,
         public SentEmail $log,
     ) {}
 
     public function handle(): void
     {
-        $this->invoice->loadMissing(['customer', 'items.product']);
+        $this->payment->loadMissing(['invoice.customer', 'invoice.items']);
 
-        Mail::to($this->invoice->customer->email)->send(new InvoiceEmail($this->invoice));
+        Mail::to($this->payment->invoice->customer->email)
+            ->send(new PaymentReceivedEmail($this->payment));
 
         $this->log->update([
             'status'  => 'sent',

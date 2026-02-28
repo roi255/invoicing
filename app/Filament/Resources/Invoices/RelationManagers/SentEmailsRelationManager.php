@@ -46,7 +46,7 @@ class SentEmailsRelationManager extends RelationManager
 
                 TextColumn::make('sent_at')
                     ->label('Sent At')
-                    ->dateTime()
+                    ->dateTime('M j, H:i')
                     ->sortable(),
             ])
             ->recordActions([

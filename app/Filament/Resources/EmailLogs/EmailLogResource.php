@@ -3,11 +3,13 @@
 namespace App\Filament\Resources\EmailLogs;
 
 use App\Filament\Resources\EmailLogs\Pages\ListEmailLogs;
+use App\Filament\Resources\EmailLogs\Pages\ViewEmailLog;
 use App\Filament\Resources\EmailLogs\Tables\EmailLogsTable;
 use App\Models\SentEmail;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class EmailLogResource extends Resource
 {
@@ -24,6 +26,11 @@ class EmailLogResource extends Resource
         return Heroicon::EnvelopeOpen;
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['invoice', 'payment']);
+    }
+
     public static function table(Table $table): Table
     {
         return EmailLogsTable::configure($table);
@@ -33,6 +40,7 @@ class EmailLogResource extends Resource
     {
         return [
             'index' => ListEmailLogs::route('/'),
+            'view'  => ViewEmailLog::route('/{record}'),
         ];
     }
 

@@ -69,7 +69,7 @@ class PaymentsRelationManager extends RelationManager
                     ->searchable(),
 
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->dateTime('M j, H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

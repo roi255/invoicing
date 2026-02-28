@@ -17,9 +17,13 @@ class InvoiceEmail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: 'Invoice ' . $this->invoice->invoice_number . ' from ' . config('app.name'),
-        );
+        $productName = $this->invoice->items->first()?->product?->name;
+
+        $subject = $productName
+            ? $this->invoice->invoice_number . '-' . $productName
+            : $this->invoice->invoice_number;
+
+        return new Envelope(subject: $subject);
     }
 
     public function content(): Content

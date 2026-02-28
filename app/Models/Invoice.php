@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
 use App\Jobs\SendInvoiceEmailJob;
+use App\Jobs\SendPaymentConfirmationJob;
 use App\Mail\InvoiceEmail;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Mail;
@@ -117,11 +118,16 @@ class Invoice extends Model
 
     public function sendEmail(): void
     {
-        $this->loadMissing('customer');
+        $this->loadMissing(['customer', 'items.product']);
 
-        $subject = 'Invoice ' . $this->invoice_number . ' from ' . config('app.name');
+        $productName = $this->items->first()?->product?->name;
+
+        $subject = $productName
+            ? $this->invoice_number . '-' . $productName
+            : $this->invoice_number;
 
         $log = $this->sentEmails()->create([
+            'type'            => 'invoice',
             'recipient_email' => $this->customer->email,
             'subject'         => $subject,
             'status'          => 'pending',
@@ -158,6 +164,24 @@ class Invoice extends Model
             'status' => $isPaid ? InvoiceStatus::Paid : InvoiceStatus::Sent,
             'paid_at' => $isPaid ? now() : null,
         ]);
+
+        $this->refresh();
+
+        $isCleared = (float) $this->total <= (float) $this->amount_paid;
+        $subject = $isCleared
+            ? 'Payment Received — Invoice ' . $this->invoice_number . ' Cleared'
+            : 'Payment Received — Invoice ' . $this->invoice_number;
+
+        $log = $this->sentEmails()->create([
+            'payment_id'      => $payment->id,
+            'type'            => 'payment',
+            'recipient_email' => $this->customer->email,
+            'subject'         => $subject,
+            'status'          => 'pending',
+            'sent_at'         => null,
+        ]);
+
+        SendPaymentConfirmationJob::dispatch($payment, $log);
 
         return $payment;
     }

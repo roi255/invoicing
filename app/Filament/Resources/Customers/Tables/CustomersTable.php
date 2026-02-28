@@ -36,7 +36,7 @@ class CustomersTable
                     ->sortable(),
 
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->dateTime('M j, H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
