@@ -23,9 +23,18 @@ class CustomersTable
                     ->searchable()
                     ->sortable(),
 
+                TextColumn::make('type')
+                    ->badge()
+                    ->sortable(),
+
                 TextColumn::make('email')
                     ->searchable()
                     ->sortable(),
+
+                TextColumn::make('contact_name')
+                    ->label('Contact Person')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('phone')
                     ->searchable(),

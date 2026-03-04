@@ -30,7 +30,7 @@ class SendInvoiceReminderJob implements ShouldQueue
 
         $pdfData = $this->invoice->generatePdf();
 
-        Mail::to($this->invoice->customer->email)
+        Mail::to($this->invoice->getRecipientEmails())
             ->send(new InvoiceReminderEmail($this->invoice, $pdfData));
 
         $this->log->update([

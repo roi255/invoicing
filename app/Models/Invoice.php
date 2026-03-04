@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\InvoiceSendTo;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Setting;
@@ -34,6 +35,7 @@ class Invoice extends Model
         'total',
         'amount_paid',
         'notes',
+        'send_to',
         'sent_at',
         'paid_at',
     ];
@@ -42,6 +44,7 @@ class Invoice extends Model
         'status' => InvoiceStatus::class,
         'invoice_date' => 'date',
         'due_date' => 'date',
+        'send_to' => InvoiceSendTo::class,
         'sent_at' => 'datetime',
         'paid_at' => 'datetime',
         'subtotal' => 'decimal:2',
@@ -78,6 +81,21 @@ class Invoice extends Model
     public function balanceDue(): Attribute
     {
         return Attribute::get(fn () => $this->total - $this->amount_paid);
+    }
+
+    public function getRecipientEmails(): array
+    {
+        $customer = $this->customer;
+
+        if (! $customer->isCompany() || blank($customer->contact_email)) {
+            return [$customer->email];
+        }
+
+        return match ($this->send_to) {
+            InvoiceSendTo::Contact => [$customer->contact_email],
+            InvoiceSendTo::Both    => [$customer->email, $customer->contact_email],
+            default                => [$customer->email],
+        };
     }
 
     public static function generateInvoiceNumber(): string
@@ -140,7 +158,7 @@ class Invoice extends Model
 
         $log = $this->sentEmails()->create([
             'type'            => 'invoice',
-            'recipient_email' => $this->customer->email,
+            'recipient_email' => implode(', ', $this->getRecipientEmails()),
             'subject'         => $subject,
             'status'          => 'pending',
             'sent_at'         => null,
@@ -157,7 +175,7 @@ class Invoice extends Model
 
         $log = $this->sentEmails()->create([
             'type'            => 'reminder',
-            'recipient_email' => $this->customer->email,
+            'recipient_email' => implode(', ', $this->getRecipientEmails()),
             'subject'         => $subject,
             'status'          => 'pending',
             'sent_at'         => null,

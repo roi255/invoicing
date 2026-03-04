@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Invoices\Schemas;
 
+use App\Enums\CustomerType;
 use App\Enums\InvoiceStatus;
+use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Setting;
 use Filament\Forms\Components\DatePicker;
@@ -31,12 +33,59 @@ class InvoiceForm
                             ->searchable()
                             ->preload()
                             ->required()
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set) => $set('send_to', null))
                             ->createOptionForm([
+                                Select::make('type')
+                                    ->label('Customer Type')
+                                    ->options(CustomerType::class)
+                                    ->default(CustomerType::Individual)
+                                    ->required()
+                                    ->live()
+                                    ->columnSpanFull(),
+
                                 TextInput::make('name')->required()->maxLength(255),
                                 TextInput::make('email')->email()->required()->maxLength(255),
                                 TextInput::make('phone')->tel()->maxLength(50),
+
+                                TextInput::make('contact_name')
+                                    ->label('Contact Name')
+                                    ->maxLength(255)
+                                    ->visible(fn (Get $get) => $get('type') === CustomerType::Company->value),
+
+                                TextInput::make('contact_email')
+                                    ->label('Contact Email')
+                                    ->email()
+                                    ->maxLength(255)
+                                    ->visible(fn (Get $get) => $get('type') === CustomerType::Company->value),
+
+                                TextInput::make('contact_phone')
+                                    ->label('Contact Phone')
+                                    ->tel()
+                                    ->maxLength(50)
+                                    ->visible(fn (Get $get) => $get('type') === CustomerType::Company->value),
                             ])
                             ->label('Customer'),
+
+                        Select::make('send_to')
+                            ->label('Send Invoice To')
+                            ->options(function (Get $get): array {
+                                $customer = Customer::find($get('customer_id'));
+                                if (! $customer?->isCompany() || blank($customer->contact_email)) {
+                                    return [];
+                                }
+                                return [
+                                    'company' => 'Company Email (' . $customer->email . ')',
+                                    'contact' => 'Contact: ' . ($customer->contact_name ?? 'Contact') . ' <' . $customer->contact_email . '>',
+                                    'both'    => 'Both Emails',
+                                ];
+                            })
+                            ->visible(function (Get $get): bool {
+                                $customer = Customer::find($get('customer_id'));
+                                return $customer?->isCompany() && filled($customer->contact_email);
+                            })
+                            ->default('company')
+                            ->columnSpanFull(),
 
                         Select::make('status')
                             ->options(InvoiceStatus::class)

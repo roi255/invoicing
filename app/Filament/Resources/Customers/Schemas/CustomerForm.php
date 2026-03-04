@@ -2,9 +2,12 @@
 
 namespace App\Filament\Resources\Customers\Schemas;
 
+use App\Enums\CustomerType;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class CustomerForm
@@ -17,16 +20,47 @@ class CustomerForm
                 Section::make('Contact Information')
                     ->columns(2)
                     ->schema([
+                        Select::make('type')
+                            ->label('Customer Type')
+                            ->options(CustomerType::class)
+                            ->default(CustomerType::Individual)
+                            ->required()
+                            ->live()
+                            ->columnSpanFull(),
+
                         TextInput::make('name')
+                            ->label(fn (Get $get) => $get('type') === CustomerType::Company->value ? 'Company Name' : 'Full Name')
                             ->required()
                             ->maxLength(255),
 
                         TextInput::make('email')
+                            ->label(fn (Get $get) => $get('type') === CustomerType::Company->value ? 'Company Email' : 'Email')
                             ->email()
                             ->required()
                             ->maxLength(255),
 
                         TextInput::make('phone')
+                            ->label(fn (Get $get) => $get('type') === CustomerType::Company->value ? 'Company Phone' : 'Phone')
+                            ->tel()
+                            ->maxLength(50),
+                    ]),
+
+                Section::make('Primary Contact')
+                    ->description('The main point of contact at this company.')
+                    ->columns(2)
+                    ->visible(fn (Get $get) => $get('type') === CustomerType::Company->value)
+                    ->schema([
+                        TextInput::make('contact_name')
+                            ->label('Contact Name')
+                            ->maxLength(255),
+
+                        TextInput::make('contact_email')
+                            ->label('Contact Email')
+                            ->email()
+                            ->maxLength(255),
+
+                        TextInput::make('contact_phone')
+                            ->label('Contact Phone')
                             ->tel()
                             ->maxLength(50),
                     ]),

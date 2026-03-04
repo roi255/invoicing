@@ -31,7 +31,7 @@ class CustomerResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static array $globallySearchableAttributes = ['name', 'email'];
+    protected static array $globallySearchableAttributes = ['name', 'email', 'contact_name', 'contact_email'];
 
     public static function form(Schema $schema): Schema
     {

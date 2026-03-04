@@ -14,11 +14,35 @@ class CustomerInfolist
             ->columns(1)
             ->components([
                 Section::make('Contact Information')
-                    ->columns(3)
+                    ->columns(4)
                     ->schema([
-                        TextEntry::make('name'),
-                        TextEntry::make('email')->copyable(),
-                        TextEntry::make('phone'),
+                        TextEntry::make('type')
+                            ->badge(),
+
+                        TextEntry::make('name')
+                            ->label(fn ($record) => $record->isCompany() ? 'Company Name' : 'Full Name'),
+
+                        TextEntry::make('email')
+                            ->label(fn ($record) => $record->isCompany() ? 'Company Email' : 'Email')
+                            ->copyable(),
+
+                        TextEntry::make('phone')
+                            ->label(fn ($record) => $record->isCompany() ? 'Company Phone' : 'Phone'),
+                    ]),
+
+                Section::make('Primary Contact')
+                    ->columns(3)
+                    ->visible(fn ($record) => $record->isCompany() && filled($record->contact_name))
+                    ->schema([
+                        TextEntry::make('contact_name')
+                            ->label('Contact Name'),
+
+                        TextEntry::make('contact_email')
+                            ->label('Contact Email')
+                            ->copyable(),
+
+                        TextEntry::make('contact_phone')
+                            ->label('Contact Phone'),
                     ]),
 
                 Section::make('Address')
