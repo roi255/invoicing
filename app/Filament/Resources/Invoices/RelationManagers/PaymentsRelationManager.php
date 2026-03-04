@@ -58,9 +58,9 @@ class PaymentsRelationManager extends RelationManager
                     ->label('Date'),
 
                 TextColumn::make('amount')
-                    ->money('usd')
+                    ->money(\App\Models\Setting::currency())
                     ->sortable()
-                    ->summarize(Sum::make()->money('usd')),
+                    ->summarize(Sum::make()->money(\App\Models\Setting::currency())),
 
                 TextColumn::make('method')
                     ->badge(),

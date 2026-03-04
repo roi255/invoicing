@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Mail\InvoiceEmail;
+use App\Mail\InvoiceReminderEmail;
 use App\Models\Invoice;
 use App\Models\SentEmail;
 use Illuminate\Bus\Queueable;
@@ -12,12 +12,11 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
 
-class SendInvoiceEmailJob implements ShouldQueue
+class SendInvoiceReminderJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
-
     public int $backoff = 60;
 
     public function __construct(
@@ -32,7 +31,7 @@ class SendInvoiceEmailJob implements ShouldQueue
         $pdfData = $this->invoice->generatePdf();
 
         Mail::to($this->invoice->customer->email)
-            ->send(new InvoiceEmail($this->invoice, $pdfData));
+            ->send(new InvoiceReminderEmail($this->invoice, $pdfData));
 
         $this->log->update([
             'status'  => 'sent',

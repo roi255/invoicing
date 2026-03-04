@@ -37,13 +37,13 @@ class EmailLogsTable
 
                 TextColumn::make('invoice.total')
                     ->label('Invoice Amount')
-                    ->money('usd')
+                    ->money(\App\Models\Setting::currency())
                     ->placeholder('—')
                     ->visible(fn ($livewire) => ($livewire->activeTab ?? 'invoices') === 'invoices'),
 
                 TextColumn::make('payment.amount')
                     ->label('Amount Paid')
-                    ->money('usd')
+                    ->money(\App\Models\Setting::currency())
                     ->placeholder('—')
                     ->visible(fn ($livewire) => ($livewire->activeTab ?? 'invoices') === 'payments'),
 
@@ -94,7 +94,6 @@ class EmailLogsTable
                     ->modalDescription(fn ($record) => 'Resend this email to ' . $record->recipient_email . '?')
                     ->action(function ($record) {
                         if ($record->type === 'payment') {
-                            // Resend payment confirmation
                             $invoice = $record->invoice;
                             $payment = $record->payment;
                             $isCleared = (float) $invoice->total <= (float) $invoice->amount_paid;
@@ -103,6 +102,7 @@ class EmailLogsTable
                                 : 'Payment Received — Invoice ' . $invoice->invoice_number;
 
                             $log = $invoice->sentEmails()->create([
+                                'type'            => 'payment',
                                 'payment_id'      => $payment->id,
                                 'recipient_email' => $invoice->customer->email,
                                 'subject'         => $subject,
@@ -111,8 +111,9 @@ class EmailLogsTable
                             ]);
 
                             \App\Jobs\SendPaymentConfirmationJob::dispatch($payment, $log);
+                        } elseif ($record->type === 'reminder') {
+                            $record->invoice->sendReminder();
                         } else {
-                            // Resend invoice email
                             $record->invoice->sendEmail();
                         }
                     })

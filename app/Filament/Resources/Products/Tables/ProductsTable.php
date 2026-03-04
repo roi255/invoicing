@@ -31,7 +31,7 @@ class ProductsTable
                     ->label('SKU'),
 
                 TextColumn::make('unit_price')
-                    ->money('usd')
+                    ->money(\App\Models\Setting::currency())
                     ->sortable()
                     ->label('Unit Price'),
 

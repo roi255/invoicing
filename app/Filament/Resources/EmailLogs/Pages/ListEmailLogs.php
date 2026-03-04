@@ -28,6 +28,9 @@ class ListEmailLogs extends ListRecords
 
             'payments' => Tab::make('Payment Confirmations')
                 ->query(fn (Builder $query) => $query->where('type', 'payment')),
+
+            'reminders' => Tab::make('Reminders')
+                ->query(fn (Builder $query) => $query->where('type', 'reminder')),
         ];
     }
 }

@@ -19,7 +19,7 @@ class ProductInfolist
                     ->label('SKU'),
 
                 TextEntry::make('unit_price')
-                    ->money('usd')
+                    ->money(\App\Models\Setting::currency())
                     ->label('Unit Price'),
 
                 IconEntry::make('is_active')

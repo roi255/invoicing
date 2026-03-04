@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Invoices\Schemas;
 
 use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -40,29 +41,12 @@ class InvoiceInfolist
                         TextEntry::make('customer.phone')->label('Phone'),
                     ]),
 
-                Section::make('Totals')
-                    ->columns(5)
+                Section::make('Items')
                     ->schema([
-                        TextEntry::make('subtotal')
-                            ->money('usd'),
-
-                        TextEntry::make('tax_rate')
-                            ->suffix('%')
-                            ->label('Tax Rate'),
-
-                        TextEntry::make('tax_amount')
-                            ->money('usd')
-                            ->label('Tax'),
-
-                        TextEntry::make('total')
-                            ->money('usd')
-                            ->weight('bold'),
-
-                        TextEntry::make('balance_due')
-                            ->money('usd')
-                            ->label('Balance Due')
-                            ->state(fn ($record) => $record->total - $record->amount_paid)
-                            ->color(fn ($state) => $state > 0 ? 'danger' : 'success'),
+                        ViewEntry::make('items')
+                            ->view('filament.infolists.invoice-items-table')
+                            ->hiddenLabel()
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make('Notes')

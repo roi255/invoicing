@@ -34,7 +34,7 @@ class InvoiceStatsWidget extends StatsOverviewWidget
             ->selectRaw('SUM(total - amount_paid) as balance')
             ->value('balance') ?? 0;
 
-        $overdueCount = Invoice::where('status', InvoiceStatus::Sent)
+        $overdueCount = Invoice::whereIn('status', [InvoiceStatus::Sent, InvoiceStatus::Overdue])
             ->where('due_date', '<', now())
             ->count();
 

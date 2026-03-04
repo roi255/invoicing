@@ -4,9 +4,12 @@ namespace App\Models;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
+use App\Models\Setting;
 use App\Jobs\SendInvoiceEmailJob;
+use App\Jobs\SendInvoiceReminderJob;
 use App\Jobs\SendPaymentConfirmationJob;
 use App\Mail\InvoiceEmail;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -79,7 +82,7 @@ class Invoice extends Model
 
     public static function generateInvoiceNumber(): string
     {
-        $prefix = 'INV-' . now()->format('Ym') . '-';
+        $prefix = rtrim(Setting::get('invoice_prefix', 'INV'), '-') . '-' . now()->format('Ym') . '-';
         $last = self::withTrashed()
             ->where('invoice_number', 'like', $prefix . '%')
             ->orderByDesc('invoice_number')
@@ -116,6 +119,15 @@ class Invoice extends Model
         return $this->hasMany(SentEmail::class);
     }
 
+    public function generatePdf(): string
+    {
+        $this->loadMissing(['customer', 'items.product']);
+
+        return Pdf::loadView('pdf.invoice', ['invoice' => $this])
+            ->setPaper('a4')
+            ->output();
+    }
+
     public function sendEmail(): void
     {
         $this->loadMissing(['customer', 'items.product']);
@@ -135,6 +147,23 @@ class Invoice extends Model
         ]);
 
         SendInvoiceEmailJob::dispatch($this, $log);
+    }
+
+    public function sendReminder(): void
+    {
+        $this->loadMissing('customer');
+
+        $subject = 'Payment Reminder — ' . $this->invoice_number . ' is Overdue';
+
+        $log = $this->sentEmails()->create([
+            'type'            => 'reminder',
+            'recipient_email' => $this->customer->email,
+            'subject'         => $subject,
+            'status'          => 'pending',
+            'sent_at'         => null,
+        ]);
+
+        SendInvoiceReminderJob::dispatch($this, $log);
     }
 
     public function markAsPaid(): void

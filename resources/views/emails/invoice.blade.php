@@ -163,14 +163,20 @@
 </head>
 <body>
 <div class="wrapper">
+    @php
+        $companyName  = \App\Models\Setting::get('company_name', config('app.name'));
+        $greeting     = \App\Models\Setting::get('email_greeting', 'Hi');
+        $signature    = \App\Models\Setting::get('email_signature');
+        $bankAccNum   = \App\Models\Setting::get('bank_account_number');
+    @endphp
     <div class="header">
-        <h1>{{ config('app.name') }}</h1>
+        <h1>{{ $companyName }}</h1>
         <p>Invoice {{ $invoice->invoice_number }}</p>
     </div>
 
     <div class="body">
         <p class="greeting">
-            Hi {{ $invoice->customer->name }},
+            {{ $greeting }} {{ $invoice->customer->name }},
         </p>
         <p class="greeting" style="margin-top: -12px;">
             Please find below the details for invoice <strong>{{ $invoice->invoice_number }}</strong>.
@@ -254,13 +260,30 @@
         <div class="notes">{{ $invoice->notes }}</div>
         @endif
 
+        @if($bankAccNum)
+        <div class="section-title" style="margin-top: 20px;">Bank Transfer Details</div>
+        <div class="notes">
+            @if(\App\Models\Setting::get('bank_name'))<strong>Bank:</strong> {{ \App\Models\Setting::get('bank_name') }}<br>@endif
+            @if(\App\Models\Setting::get('bank_account_name'))<strong>Account Name:</strong> {{ \App\Models\Setting::get('bank_account_name') }}<br>@endif
+            <strong>Account No:</strong> {{ $bankAccNum }}
+            @if(\App\Models\Setting::get('bank_routing_number'))<br><strong>Routing / Sort Code:</strong> {{ \App\Models\Setting::get('bank_routing_number') }}@endif
+            @if(\App\Models\Setting::get('bank_iban'))<br><strong>IBAN:</strong> {{ \App\Models\Setting::get('bank_iban') }}@endif
+            @if(\App\Models\Setting::get('bank_swift'))<br><strong>SWIFT / BIC:</strong> {{ \App\Models\Setting::get('bank_swift') }}@endif
+            @if(\App\Models\Setting::get('payment_link'))<br><strong>Payment Link:</strong> <a href="{{ \App\Models\Setting::get('payment_link') }}">{{ \App\Models\Setting::get('payment_link') }}</a>@endif
+        </div>
+        @endif
+
+        @if($signature)
+        <p style="font-size: 14px; color: #71717a; margin-top: 20px;">{{ $signature }}</p>
+        @else
         <p style="font-size: 14px; color: #71717a;">
             If you have any questions about this invoice, please don't hesitate to get in touch.
         </p>
+        @endif
     </div>
 
     <div class="footer">
-        &copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
+        &copy; {{ date('Y') }} {{ $companyName }}. All rights reserved.
     </div>
 </div>
 </body>

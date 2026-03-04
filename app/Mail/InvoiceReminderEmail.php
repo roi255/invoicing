@@ -12,7 +12,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class InvoiceEmail extends Mailable
+class InvoiceReminderEmail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -23,23 +23,19 @@ class InvoiceEmail extends Mailable
 
     public function envelope(): Envelope
     {
-        $productName = $this->invoice->items->first()?->product?->name;
-
-        $subject = $productName
-            ? $this->invoice->invoice_number . '-' . $productName
-            : $this->invoice->invoice_number;
+        $daysOverdue = now()->startOfDay()->diffInDays($this->invoice->due_date->startOfDay());
 
         $replyTo = Setting::get('email_reply_to') ?: Setting::get('company_email', config('mail.from.address'));
 
         return new Envelope(
-            subject: $subject,
+            subject: 'Payment Reminder — ' . $this->invoice->invoice_number . ' is Overdue',
             replyTo: [new Address($replyTo)],
         );
     }
 
     public function content(): Content
     {
-        return new Content(view: 'emails.invoice');
+        return new Content(view: 'emails.invoice-reminder');
     }
 
     public function attachments(): array

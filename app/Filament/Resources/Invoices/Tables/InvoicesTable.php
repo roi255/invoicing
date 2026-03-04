@@ -4,14 +4,19 @@ namespace App\Filament\Resources\Invoices\Tables;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
+use App\Models\Setting;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Response;
+use League\Csv\Writer;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -53,11 +58,11 @@ class InvoicesTable
                     ->label('Due'),
 
                 TextColumn::make('total')
-                    ->money('usd')
+                    ->money(Setting::currency())
                     ->sortable(),
 
                 TextColumn::make('balance_due')
-                    ->money('usd')
+                    ->money(Setting::currency())
                     ->sortable()
                     ->label('Balance Due')
                     ->state(fn ($record) => $record->total - $record->amount_paid),
@@ -124,7 +129,7 @@ class InvoicesTable
 
                         Select::make('method')
                             ->options(PaymentMethod::class)
-                            ->default(PaymentMethod::BankTransfer)
+                            ->default(fn () => PaymentMethod::tryFrom(Setting::get('default_payment_method', 'bank_transfer')) ?? PaymentMethod::BankTransfer)
                             ->required(),
 
                         TextInput::make('reference')
@@ -167,6 +172,53 @@ class InvoicesTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('send_emails')
+                        ->label('Send Invoices')
+                        ->icon(Heroicon::PaperAirplane)
+                        ->color('info')
+                        ->requiresConfirmation()
+                        ->modalHeading('Send Selected Invoices')
+                        ->modalDescription('This will email all selected draft invoices to their customers and mark them as sent.')
+                        ->action(function (Collection $records) {
+                            $records
+                                ->filter(fn ($r) => $r->status === InvoiceStatus::Draft)
+                                ->each(function ($invoice) {
+                                    $invoice->markAsSent();
+                                    $invoice->sendEmail();
+                                });
+                        })
+                        ->successNotificationTitle('Invoices queued for sending')
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('export_csv')
+                        ->label('Export to CSV')
+                        ->icon(Heroicon::ArrowDownTray)
+                        ->color('gray')
+                        ->action(function (Collection $records) {
+                            $csv = Writer::createFromString();
+                            $csv->insertOne(['Invoice #', 'Customer', 'Status', 'Invoice Date', 'Due Date', 'Total', 'Amount Paid', 'Balance Due']);
+
+                            foreach ($records->load('customer') as $invoice) {
+                                $csv->insertOne([
+                                    $invoice->invoice_number,
+                                    $invoice->customer->name,
+                                    $invoice->status->getLabel(),
+                                    $invoice->invoice_date->format('Y-m-d'),
+                                    $invoice->due_date->format('Y-m-d'),
+                                    number_format((float) $invoice->total, 2),
+                                    number_format((float) $invoice->amount_paid, 2),
+                                    number_format((float) ($invoice->total - $invoice->amount_paid), 2),
+                                ]);
+                            }
+
+                            return Response::streamDownload(
+                                fn () => print($csv->toString()),
+                                'invoices-' . now()->format('Y-m-d') . '.csv',
+                                ['Content-Type' => 'text/csv'],
+                            );
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
                     DeleteBulkAction::make(),
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),

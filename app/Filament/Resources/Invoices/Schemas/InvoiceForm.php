@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Invoices\Schemas;
 
 use App\Enums\InvoiceStatus;
 use App\Models\Product;
+use App\Models\Setting;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -49,7 +50,7 @@ class InvoiceForm
                             ->label('Invoice Date'),
 
                         DatePicker::make('due_date')
-                            ->default(now()->addDays(30))
+                            ->default(fn () => now()->addDays((int) Setting::get('default_payment_terms', 30)))
                             ->required()
                             ->after('invoice_date')
                             ->label('Due Date'),
@@ -141,7 +142,7 @@ class InvoiceForm
                         TextInput::make('tax_rate')
                             ->numeric()
                             ->suffix('%')
-                            ->default(0)
+                            ->default(fn () => (float) Setting::get('default_tax_rate', 0))
                             ->required()
                             ->minValue(0)
                             ->maxValue(100)
@@ -176,6 +177,7 @@ class InvoiceForm
                         Textarea::make('notes')
                             ->rows(4)
                             ->maxLength(5000)
+                            ->default(fn () => Setting::get('default_notes'))
                             ->columnSpanFull(),
                     ]),
             ]);

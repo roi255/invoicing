@@ -36,11 +36,11 @@ class InvoicesRelationManager extends RelationManager
                     ->label('Date'),
 
                 TextColumn::make('total')
-                    ->money('usd')
+                    ->money(\App\Models\Setting::currency())
                     ->sortable(),
 
                 TextColumn::make('balance_due')
-                    ->money('usd')
+                    ->money(\App\Models\Setting::currency())
                     ->label('Balance')
                     ->state(fn ($record) => $record->total - $record->amount_paid),
             ])

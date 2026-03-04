@@ -56,12 +56,12 @@ class RecentInvoicesWidget extends TableWidget
                     ),
 
                 TextColumn::make('total')
-                    ->money('usd')
+                    ->money(\App\Models\Setting::currency())
                     ->sortable(),
 
                 TextColumn::make('balance_due')
                     ->label('Balance')
-                    ->money('usd')
+                    ->money(\App\Models\Setting::currency())
                     ->state(fn (Invoice $record) => max(0, $record->total - $record->amount_paid))
                     ->color(fn ($state): string => $state > 0 ? 'warning' : 'success'),
             ])
