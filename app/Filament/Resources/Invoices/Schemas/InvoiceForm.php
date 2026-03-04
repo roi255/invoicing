@@ -51,19 +51,19 @@ class InvoiceForm
                                 TextInput::make('contact_name')
                                     ->label('Contact Name')
                                     ->maxLength(255)
-                                    ->visible(fn (Get $get) => $get('type') === CustomerType::Company->value),
+                                    ->visible(fn (Get $get) => $get->enum('type', CustomerType::class) === CustomerType::Company),
 
                                 TextInput::make('contact_email')
                                     ->label('Contact Email')
                                     ->email()
                                     ->maxLength(255)
-                                    ->visible(fn (Get $get) => $get('type') === CustomerType::Company->value),
+                                    ->visible(fn (Get $get) => $get->enum('type', CustomerType::class) === CustomerType::Company),
 
                                 TextInput::make('contact_phone')
                                     ->label('Contact Phone')
                                     ->tel()
                                     ->maxLength(50)
-                                    ->visible(fn (Get $get) => $get('type') === CustomerType::Company->value),
+                                    ->visible(fn (Get $get) => $get->enum('type', CustomerType::class) === CustomerType::Company),
                             ])
                             ->label('Customer'),
 

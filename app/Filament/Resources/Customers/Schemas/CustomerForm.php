@@ -29,18 +29,18 @@ class CustomerForm
                             ->columnSpanFull(),
 
                         TextInput::make('name')
-                            ->label(fn (Get $get) => $get('type') === CustomerType::Company->value ? 'Company Name' : 'Full Name')
+                            ->label(fn (Get $get) => $get->enum('type', CustomerType::class) === CustomerType::Company ? 'Company Name' : 'Full Name')
                             ->required()
                             ->maxLength(255),
 
                         TextInput::make('email')
-                            ->label(fn (Get $get) => $get('type') === CustomerType::Company->value ? 'Company Email' : 'Email')
+                            ->label(fn (Get $get) => $get->enum('type', CustomerType::class) === CustomerType::Company ? 'Company Email' : 'Email')
                             ->email()
                             ->required()
                             ->maxLength(255),
 
                         TextInput::make('phone')
-                            ->label(fn (Get $get) => $get('type') === CustomerType::Company->value ? 'Company Phone' : 'Phone')
+                            ->label(fn (Get $get) => $get->enum('type', CustomerType::class) === CustomerType::Company ? 'Company Phone' : 'Phone')
                             ->tel()
                             ->maxLength(50),
                     ]),
@@ -48,7 +48,7 @@ class CustomerForm
                 Section::make('Primary Contact')
                     ->description('The main point of contact at this company.')
                     ->columns(2)
-                    ->visible(fn (Get $get) => $get('type') === CustomerType::Company->value)
+                    ->visible(fn (Get $get) => $get->enum('type', CustomerType::class) === CustomerType::Company)
                     ->schema([
                         TextInput::make('contact_name')
                             ->label('Contact Name')
