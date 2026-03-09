@@ -594,28 +594,113 @@
             max-width: 600px;
         }
 
-        /* ── Scroll indicator ────────────────────────────────────────── */
-        .scroll-indicator {
-            position: absolute;
-            bottom: 2.5rem;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: .5rem;
-            font-size: .72rem;
-            color: var(--text-secondary);
-            letter-spacing: .1em;
-            text-transform: uppercase;
-            animation: bounce-fade 2s ease-in-out infinite;
+        /* ── System stats section ───────────────────────────────────── */
+        #system-stats { padding: 5rem 2rem; }
+
+        .stats-table-wrap {
+            max-width: 820px;
+            margin: 0 auto;
+            background: rgba(15,15,30,.85);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            overflow: hidden;
+            backdrop-filter: blur(24px);
+            box-shadow: 0 0 0 1px rgba(99,102,241,.1), 0 40px 80px rgba(0,0,0,.5);
         }
 
-        .scroll-indicator svg { width: 16px; height: 16px; }
+        .stats-table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.75rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
 
-        @keyframes bounce-fade {
-            0%, 100% { opacity: .5; transform: translateX(-50%) translateY(0); }
-            50% { opacity: 1; transform: translateX(-50%) translateY(4px); }
+        .stats-table-title {
+            font-size: .82rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .live-dot {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            font-size: .72rem;
+            font-weight: 600;
+            color: #34d399;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+
+        .live-dot::before {
+            content: '';
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #34d399;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        .stat-row {
+            display: grid;
+            grid-template-columns: 2.5rem 1fr auto;
+            align-items: center;
+            gap: 1.25rem;
+            padding: 1.25rem 1.75rem;
+            border-bottom: 1px solid var(--glass-border);
+            transition: background .2s ease;
+        }
+
+        .stat-row:last-child { border-bottom: none; }
+
+        .stat-row:hover { background: rgba(99,102,241,.05); }
+
+        .stat-row-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .stat-row-icon svg { width: 18px; height: 18px; }
+
+        .stat-row-info { min-width: 0; }
+
+        .stat-row-label {
+            font-size: .9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: .15rem;
+        }
+
+        .stat-row-desc {
+            font-size: .76rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-row-value {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .stat-row-num {
+            font-size: 2rem;
+            font-weight: 900;
+            letter-spacing: -.04em;
+            line-height: 1;
+        }
+
+        .stat-row-unit {
+            font-size: .7rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-top: .2rem;
         }
 
         /* ── Auth section ────────────────────────────────────────────── */
@@ -960,28 +1045,84 @@
 
         <div class="stats-bar">
             <div class="stat">
-                <div class="stat-num" data-target="1200">0</div>
+                <div class="stat-num" data-target="{{ $stats['invoices'] }}">0</div>
                 <div class="stat-label">Invoices Created</div>
             </div>
             <div class="stat">
-                <div class="stat-num" data-target="98">0</div>
-                <div class="stat-label">% On-time Payment</div>
+                <div class="stat-num" data-target="{{ $stats['customers'] }}">0</div>
+                <div class="stat-label">Customers</div>
             </div>
             <div class="stat">
-                <div class="stat-num" data-target="350">0</div>
-                <div class="stat-label">Happy Clients</div>
-            </div>
-            <div class="stat">
-                <div class="stat-num" data-target="24">0</div>
-                <div class="stat-label">Avg. Hours Saved/Month</div>
+                <div class="stat-num" data-target="{{ $stats['clients'] }}">0</div>
+                <div class="stat-label">Clients on Platform</div>
             </div>
         </div>
 
-        <div class="scroll-indicator">
-            <span>Scroll</span>
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </section>
+
+    <!-- ── System Stats ────────────────────────────────────────────── -->
+    <section id="system-stats">
+        <div class="section-header">
+            <span class="section-label">Platform overview</span>
+            <h2 class="section-title">Live system stats</h2>
+            <p class="section-sub">A real-time snapshot of the ROI Invoicing platform activity.</p>
+        </div>
+
+        <div class="stats-table-wrap">
+            <div class="stats-table-header">
+                <span class="stats-table-title">ROI Invoicing — System</span>
+                <span class="live-dot">Live</span>
+            </div>
+
+            {{-- Total Invoices ──────────────────────────────────── --}}
+            <div class="stat-row">
+                <div class="stat-row-icon icon-indigo">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <div class="stat-row-info">
+                    <div class="stat-row-label">Total Invoices</div>
+                    <div class="stat-row-desc">All invoices ever created in the system</div>
+                </div>
+                <div class="stat-row-value">
+                    <div class="stat-row-num" style="color:#818cf8;" data-target="{{ $stats['invoices'] }}">0</div>
+                    <div class="stat-row-unit">invoices</div>
+                </div>
+            </div>
+
+            {{-- Total Customers ─────────────────────────────────── --}}
+            <div class="stat-row">
+                <div class="stat-row-icon icon-violet">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="stat-row-info">
+                    <div class="stat-row-label">Total Customers</div>
+                    <div class="stat-row-desc">Individuals and companies billed through the platform</div>
+                </div>
+                <div class="stat-row-value">
+                    <div class="stat-row-num" style="color:#c084fc;" data-target="{{ $stats['customers'] }}">0</div>
+                    <div class="stat-row-unit">customers</div>
+                </div>
+            </div>
+
+            {{-- Total Clients ───────────────────────────────────── --}}
+            <div class="stat-row">
+                <div class="stat-row-icon icon-emerald">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                </div>
+                <div class="stat-row-info">
+                    <div class="stat-row-label">Total Clients</div>
+                    <div class="stat-row-desc">Registered users operating the ROI Invoicing dashboard</div>
+                </div>
+                <div class="stat-row-value">
+                    <div class="stat-row-num" style="color:#34d399;" data-target="{{ $stats['clients'] }}">0</div>
+                    <div class="stat-row-unit">clients</div>
+                </div>
+            </div>
+
         </div>
     </section>
+
+    <div class="gradient-line"></div>
 
     <!-- ── Auth ────────────────────────────────────────────────────── -->
     <section id="auth">
