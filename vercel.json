@@ -46,10 +46,17 @@
         "APP_SERVICES_CACHE": "/tmp/services.php",
         "VIEW_COMPILED_PATH": "/tmp",
 
+        "APP_NAME": "ROI Invoicing",
+
         "DB_CONNECTION": "libsql",
         "QUEUE_CONNECTION": "redis",
         "CACHE_DRIVER": "array",
         "LOG_CHANNEL": "stderr",
-        "SESSION_DRIVER": "cookie"
+        "SESSION_DRIVER": "cookie",
+
+        "MAIL_MAILER": "smtp",
+        "MAIL_HOST": "smtp.gmail.com",
+        "MAIL_PORT": "587",
+        "MAIL_FROM_NAME": "ROI Invoicing"
     }
 }
