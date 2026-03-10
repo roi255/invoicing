@@ -80,34 +80,31 @@ Route::post('/worker', function (Request $request) {
     ]);
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
-Route::get('/debug/dispatch', function (Request $request) {
+Route::get('/debug/send-now', function (Request $request) {
     $secret = env('CRON_SECRET', '');
 
     if (empty($secret) || $request->query('secret') !== $secret) {
         abort(401);
     }
 
-    $redis  = app('redis')->connection();
-    $before = $redis->llen('queues:default');
+    $invoice = Invoice::with(['customer', 'items.product'])->latest()->firstOrFail();
+    $invoice->loadMissing(['customer', 'items.product']);
 
-    $dispatchError = null;
     try {
-        \Illuminate\Support\Facades\Queue::connection('redis')->push('test', ['ping' => true], 'default');
+        $pdfData = $invoice->generatePdf();
+
+        Mail::to($invoice->getRecipientEmails())
+            ->send(new \App\Mail\InvoiceEmail($invoice, $pdfData));
+
+        return response()->json(['status' => 'ok', 'sent_to' => $invoice->getRecipientEmails()]);
     } catch (\Throwable $e) {
-        $dispatchError = $e->getMessage();
+        return response()->json([
+            'status'  => 'error',
+            'message' => $e->getMessage(),
+            'file'    => $e->getFile() . ':' . $e->getLine(),
+            'trace'   => collect(explode("\n", $e->getTraceAsString()))->take(10)->values(),
+        ], 500);
     }
-
-    $after = $redis->llen('queues:default');
-
-    return response()->json([
-        'queue_driver'  => config('queue.default'),
-        'redis_url_set' => ! empty(env('REDIS_URL')),
-        'redis_host'    => config('database.redis.default.host'),
-        'before'        => $before,
-        'after'         => $after,
-        'job_in_redis'  => $after > $before,
-        'dispatch_error'=> $dispatchError,
-    ]);
 });
 
 Route::get('/debug/redis', function (Request $request) {
@@ -128,6 +125,41 @@ Route::get('/debug/redis', function (Request $request) {
         'delayed'    => $redis->zcard('queues:default:delayed'),
         'failed'     => $redis->llen('queues:failed'),
     ]);
+});
+
+Route::get('/debug/process-now', function (Request $request) {
+    $secret = env('CRON_SECRET', '');
+
+    if (empty($secret) || $request->query('secret') !== $secret) {
+        abort(401);
+    }
+
+    $redis    = app('redis')->connection();
+    $results  = [];
+    $processed = 0;
+
+    // Drain and process up to 10 jobs, capturing full errors
+    while ($processed < 10) {
+        $job = \Illuminate\Support\Facades\Queue::connection('redis')->pop('default');
+        if (! $job) break;
+
+        $processed++;
+        try {
+            $job->fire();
+            $results[] = ['job' => $job->getName(), 'status' => 'ok'];
+        } catch (\Throwable $e) {
+            try { $job->fail($e); } catch (\Throwable $ignored) {}
+            $results[] = [
+                'job'    => $job->getName(),
+                'status' => 'failed',
+                'error'  => $e->getMessage(),
+                'file'   => $e->getFile() . ':' . $e->getLine(),
+                'trace'  => collect(explode("\n", $e->getTraceAsString()))->take(8)->values(),
+            ];
+        }
+    }
+
+    return response()->json(['processed' => $processed, 'remaining' => $redis->llen('queues:default'), 'results' => $results]);
 });
 
 Route::get('/debug/pdf', function (Request $request) {
