@@ -37,16 +37,27 @@ Route::post('/worker', function (Request $request) {
         abort(401);
     }
 
+    $redis = app('redis')->connection();
+    $prefix = config('database.redis.options.prefix', '');
+    $queueKey = $prefix . 'queues:default';
+    $before = $redis->llen($queueKey);
+
     Artisan::call('queue:work', [
         '--stop-when-empty' => true,
         '--max-time'        => 50,
-        '--tries'           => 3,
-        '--backoff'         => 5,
+        '--tries'           => 1,
+        '--backoff'         => 0,
     ]);
 
+    $after = $redis->llen($queueKey);
+
     return response()->json([
-        'status' => 'ok',
-        'output' => Artisan::output(),
+        'status'        => 'ok',
+        'queue_before'  => $before,
+        'queue_after'   => $after,
+        'output'        => Artisan::output(),
+        'redis_prefix'  => $prefix,
+        'queue_key'     => $queueKey,
     ]);
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
