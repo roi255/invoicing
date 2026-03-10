@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ReportController;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\SentEmail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -47,6 +48,18 @@ Route::post('/worker', function (Request $request) {
         'output' => Artisan::output(),
     ]);
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
+Route::get('/debug/emails', function (Request $request) {
+    $secret = env('CRON_SECRET', '');
+
+    if (empty($secret) || $request->query('secret') !== $secret) {
+        abort(401);
+    }
+
+    return response()->json(
+        SentEmail::latest()->limit(20)->get(['id', 'type', 'recipient_email', 'subject', 'status', 'error_message', 'sent_at', 'created_at'])
+    );
+});
 
 Route::middleware('auth')->prefix('reports')->name('reports.')->group(function () {
     Route::get('/customers', [ReportController::class, 'customers'])->name('customers');
