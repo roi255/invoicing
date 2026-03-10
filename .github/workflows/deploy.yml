@@ -1,12 +1,12 @@
-name: Deploy to Vercel
+name: Migrate Database
 
 on:
   push:
     branches: [master]
 
 jobs:
-  migrate-and-deploy:
-    name: Run Migrations & Deploy
+  migrate:
+    name: Run Migrations
     runs-on: ubuntu-latest
 
     steps:
@@ -46,12 +46,3 @@ jobs:
           APP_ROUTES_CACHE: /tmp/routes.php
           APP_SERVICES_CACHE: /tmp/services.php
         run: php artisan migrate --force
-
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          working-directory: ./
