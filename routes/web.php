@@ -37,12 +37,15 @@ Route::post('/worker', function (Request $request) {
 
     Artisan::call('queue:work', [
         '--stop-when-empty' => true,
-        '--max-time'        => 25,
+        '--max-time'        => 50,
         '--tries'           => 3,
         '--backoff'         => 5,
     ]);
 
-    return response()->json(['status' => 'ok']);
+    return response()->json([
+        'status' => 'ok',
+        'output' => Artisan::output(),
+    ]);
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
 Route::middleware('auth')->prefix('reports')->name('reports.')->group(function () {
