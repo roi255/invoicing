@@ -16,9 +16,9 @@ class SendPaymentConfirmationJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 3;
+    public int $tries = 1;
 
-    public int $backoff = 60;
+    public int $backoff = 0;
 
     public function __construct(
         public Payment $payment,

@@ -8,6 +8,7 @@ use App\Models\SentEmail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -48,6 +49,25 @@ Route::post('/worker', function (Request $request) {
         'output' => Artisan::output(),
     ]);
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
+Route::get('/debug/mail', function (Request $request) {
+    $secret = env('CRON_SECRET', '');
+
+    if (empty($secret) || $request->query('secret') !== $secret) {
+        abort(401);
+    }
+
+    try {
+        Mail::raw('Test email from ROI Invoicing', function ($message) use ($request) {
+            $message->to($request->query('to', env('MAIL_FROM_ADDRESS')))
+                    ->subject('Test Email');
+        });
+
+        return response()->json(['status' => 'ok', 'message' => 'Email sent successfully']);
+    } catch (\Throwable $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+    }
+});
 
 Route::get('/debug/emails', function (Request $request) {
     $secret = env('CRON_SECRET', '');
