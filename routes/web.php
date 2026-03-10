@@ -37,12 +37,12 @@ Route::post('/worker', function (Request $request) {
         abort(401);
     }
 
-    $redis    = app('redis')->connection();
-    $before   = $redis->llen('queues:default');
-    $results  = [];
+    $redis     = app('redis')->connection();
+    $before    = $redis->llen('queues:default');
+    $results   = [];
     $processed = 0;
 
-    while (true) {
+    while ($processed < 10) {
         $job = \Illuminate\Support\Facades\Queue::connection('redis')->pop('default');
 
         if (! $job) {
@@ -55,29 +55,29 @@ Route::post('/worker', function (Request $request) {
             $job->fire();
             $results[] = ['job' => $job->getName(), 'status' => 'ok'];
         } catch (\Throwable $e) {
-            $job->fail($e);
+            try { $job->fail($e); } catch (\Throwable $ignored) {}
             $results[] = [
-                'job'     => $job->getName(),
-                'status'  => 'failed',
-                'error'   => $e->getMessage(),
-                'file'    => $e->getFile() . ':' . $e->getLine(),
+                'job'    => $job->getName(),
+                'status' => 'failed',
+                'error'  => $e->getMessage(),
+                'file'   => $e->getFile() . ':' . $e->getLine(),
+                'trace'  => collect(explode("\n", $e->getTraceAsString()))->take(8)->values(),
             ];
-        }
-
-        if ($processed >= 10) {
-            break;
         }
     }
 
-    $after = $redis->llen('queues:default');
+    $payload = [
+        'ts'        => now()->toIso8601String(),
+        'before'    => $before,
+        'after'     => $redis->llen('queues:default'),
+        'processed' => $processed,
+        'results'   => $results,
+    ];
 
-    return response()->json([
-        'status'     => 'ok',
-        'before'     => $before,
-        'after'      => $after,
-        'processed'  => $processed,
-        'results'    => $results,
-    ]);
+    // Store result so we can retrieve it after QStash delivery
+    $redis->setex('last_worker_result', 300, json_encode($payload));
+
+    return response()->json($payload);
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
 Route::get('/debug/send-now', function (Request $request) {
@@ -196,6 +196,18 @@ Route::get('/debug/mail', function (Request $request) {
     } catch (\Throwable $e) {
         return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
     }
+});
+
+Route::get('/debug/worker-result', function (Request $request) {
+    $secret = env('CRON_SECRET', '');
+
+    if (empty($secret) || $request->query('secret') !== $secret) {
+        abort(401);
+    }
+
+    $raw = app('redis')->connection()->get('last_worker_result');
+
+    return response()->json($raw ? json_decode($raw) : ['no_result' => true]);
 });
 
 Route::get('/debug/emails', function (Request $request) {
