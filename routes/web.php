@@ -63,7 +63,7 @@ Route::get('/debug/queue', function () {
         $workerUrl = env('APP_URL') . '/worker?secret=' . urlencode(env('CRON_SECRET', ''));
         $response = \Illuminate\Support\Facades\Http::withToken($token)
             ->timeout(5)
-            ->post('https://qstash.upstash.io/v2/publish/' . urlencode($workerUrl));
+            ->post('https://qstash.upstash.io/v2/publish/' . $workerUrl);
         $results['qstash_publish_test'] = [
             'status' => $response->status(),
             'body'   => $response->json(),

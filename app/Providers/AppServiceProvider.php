@@ -36,7 +36,7 @@ class AppServiceProvider extends ServiceProvider
             if ($token) {
                 Http::withToken($token)
                     ->timeout(3)
-                    ->post('https://qstash.upstash.io/v2/publish/' . urlencode($workerUrl));
+                    ->post('https://qstash.upstash.io/v2/publish/' . $workerUrl);
             }
         });
     }
