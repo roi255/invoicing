@@ -198,6 +198,18 @@ Route::get('/debug/mail', function (Request $request) {
     }
 });
 
+Route::get('/debug/job-log', function (Request $request) {
+    $secret = env('CRON_SECRET', '');
+
+    if (empty($secret) || $request->query('secret') !== $secret) {
+        abort(401);
+    }
+
+    $raw = app('redis')->connection()->get('last_job_queued_log');
+
+    return response()->json($raw ? json_decode($raw) : ['no_log' => true]);
+});
+
 Route::get('/debug/worker-result', function (Request $request) {
     $secret = env('CRON_SECRET', '');
 

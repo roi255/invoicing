@@ -30,14 +30,28 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->app['events']->listen(JobQueued::class, function () {
+            $redis = app('redis')->connection();
             $token = env('QSTASH_TOKEN');
             $workerUrl = env('APP_URL') . '/worker?secret=' . urlencode(env('CRON_SECRET', ''));
 
+            $log = ['ts' => now()->toIso8601String(), 'token_set' => ! empty($token), 'worker_url' => $workerUrl];
+
             if ($token) {
-                Http::withToken($token)
-                    ->timeout(3)
-                    ->post('https://qstash.upstash.io/v2/publish/' . $workerUrl);
+                try {
+                    $response = Http::withToken($token)
+                        ->timeout(3)
+                        ->post('https://qstash.upstash.io/v2/publish/' . $workerUrl);
+
+                    $log['qstash_status'] = $response->status();
+                    $log['qstash_body']   = $response->body();
+                } catch (\Throwable $e) {
+                    $log['qstash_error'] = $e->getMessage();
+                }
+            } else {
+                $log['skipped'] = 'QSTASH_TOKEN not set';
             }
+
+            $redis->setex('last_job_queued_log', 300, json_encode($log));
         });
     }
 }
