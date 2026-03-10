@@ -5,6 +5,8 @@ use App\Http\Controllers\ReportController;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -24,6 +26,23 @@ Route::post('/register', [AuthController::class, 'register'])
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
+
+Route::get('/worker', function (Request $request) {
+    $secret = env('CRON_SECRET', '');
+
+    if (empty($secret) || $request->header('Authorization') !== "Bearer {$secret}") {
+        abort(401);
+    }
+
+    Artisan::call('queue:work', [
+        '--max-time' => 55,
+        '--sleep'    => 1,
+        '--tries'    => 3,
+        '--backoff'  => 5,
+    ]);
+
+    return response()->json(['status' => 'ok']);
+})->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
 Route::middleware('auth')->prefix('reports')->name('reports.')->group(function () {
     Route::get('/customers', [ReportController::class, 'customers'])->name('customers');
