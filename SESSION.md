@@ -1,4 +1,4 @@
-# Session Context — ROI Invoicing App
+# Session Context — ROI Invoicing App with laravel
 
 ## Stack
 - **Laravel 12** + **Filament v4** + **Livewire 3** + **Pest 3**
