@@ -12,14 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sent_emails', function (Blueprint $table) {
-            $table->foreignId('payment_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('payment_id')->nullable();
         });
     }
 
     public function down(): void
     {
         Schema::table('sent_emails', function (Blueprint $table) {
-            $table->dropForeignIdFor(\App\Models\Payment::class);
             $table->dropColumn('payment_id');
         });
     }
