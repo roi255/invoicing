@@ -31,6 +31,22 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-reqs
 
+      - name: Verify database connection target
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: |
+          if [ -z "$TURSO_DATABASE_URL" ]; then
+            echo "ERROR: TURSO_DATABASE_URL secret is not set"
+            exit 1
+          fi
+          if [ -z "$TURSO_AUTH_TOKEN" ]; then
+            echo "ERROR: TURSO_AUTH_TOKEN secret is not set"
+            exit 1
+          fi
+          echo "DB_CONNECTION: libsql"
+          echo "TURSO_DATABASE_URL: ${TURSO_DATABASE_URL:0:30}..."
+
       - name: Run migrations
         env:
           APP_KEY: ${{ secrets.APP_KEY }}
