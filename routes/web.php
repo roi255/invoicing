@@ -30,35 +30,40 @@ Route::post('/logout', [AuthController::class, 'logout'])
 Route::get('/debug/queue', function () {
     $results = [];
 
-    // Check env vars
-    $results['env'] = [
-        'QUEUE_CONNECTION' => env('QUEUE_CONNECTION'),
-        'REDIS_CLIENT'     => env('REDIS_CLIENT'),
-        'REDIS_URL_set'    => !empty(env('REDIS_URL')),
-        'QSTASH_TOKEN_set' => !empty(env('QSTASH_TOKEN')),
-        'CRON_SECRET_set'  => !empty(env('CRON_SECRET')),
-    ];
-
-    // Test Redis connection
+    // 1. Check Redis queue depth before dispatch
     try {
-        \Illuminate\Support\Facades\Redis::ping();
-        $results['redis'] = 'connected';
+        $before = \Illuminate\Support\Facades\Redis::llen('queues:default');
+        $results['redis_jobs_before_dispatch'] = $before;
     } catch (\Throwable $e) {
-        $results['redis'] = 'FAILED: ' . $e->getMessage();
+        $results['redis_jobs_before_dispatch'] = 'FAILED: ' . $e->getMessage();
     }
 
-    // Test QStash
+    // 2. Dispatch a test job
     try {
-        $token = env('QSTASH_TOKEN');
-        if ($token) {
-            $response = \Illuminate\Support\Facades\Http::withToken($token)
-                ->get('https://qstash.upstash.io/v2/queues');
-            $results['qstash'] = $response->successful() ? 'connected' : 'FAILED: ' . $response->status();
-        } else {
-            $results['qstash'] = 'FAILED: no token';
-        }
+        dispatch(new \App\Jobs\SendInvoiceEmailJob(
+            \App\Models\Invoice::first(),
+            \App\Models\SentEmail::first() ?? new \App\Models\SentEmail(),
+        ));
+        $results['dispatch'] = 'ok';
     } catch (\Throwable $e) {
-        $results['qstash'] = 'FAILED: ' . $e->getMessage();
+        $results['dispatch'] = 'FAILED: ' . $e->getMessage();
+    }
+
+    // 3. Check Redis queue depth after dispatch
+    try {
+        $after = \Illuminate\Support\Facades\Redis::llen('queues:default');
+        $results['redis_jobs_after_dispatch'] = $after;
+    } catch (\Throwable $e) {
+        $results['redis_jobs_after_dispatch'] = 'FAILED: ' . $e->getMessage();
+    }
+
+    // 4. Check QStash logs for recent deliveries
+    try {
+        $response = \Illuminate\Support\Facades\Http::withToken(env('QSTASH_TOKEN'))
+            ->get('https://qstash.upstash.io/v2/events', ['count' => 5]);
+        $results['qstash_recent_events'] = $response->json();
+    } catch (\Throwable $e) {
+        $results['qstash_recent_events'] = 'FAILED: ' . $e->getMessage();
     }
 
     return response()->json($results);
