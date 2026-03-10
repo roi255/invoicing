@@ -116,7 +116,7 @@ return [
             'driver' => 'libsql',
             'url' => env('TURSO_DATABASE_URL'),
             'password' => env('TURSO_AUTH_TOKEN'),
-            'database' => env('TURSO_DATABASE_URL'),
+            'database' => null,
             'prefix' => '',
         ],
 

@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sent_emails', function (Blueprint $table) {
-            $table->string('type')->default('invoice')->after('payment_id');
+            $table->string('type')->default('invoice');
         });
 
         // Fix existing records: any row with a payment_id or payment-related subject is a payment email

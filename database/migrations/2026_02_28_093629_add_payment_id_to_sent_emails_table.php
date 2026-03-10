@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sent_emails', function (Blueprint $table) {
-            $table->foreignId('payment_id')->nullable()->after('invoice_id')->constrained()->nullOnDelete();
+            $table->foreignId('payment_id')->nullable()->constrained()->nullOnDelete();
         });
     }
 
