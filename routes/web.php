@@ -27,18 +27,18 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
-Route::get('/worker', function (Request $request) {
+Route::post('/worker', function (Request $request) {
     $secret = env('CRON_SECRET', '');
 
-    if (empty($secret) || $request->header('Authorization') !== "Bearer {$secret}") {
+    if (empty($secret) || $request->query('secret') !== $secret) {
         abort(401);
     }
 
     Artisan::call('queue:work', [
-        '--max-time' => 55,
-        '--sleep'    => 1,
-        '--tries'    => 3,
-        '--backoff'  => 5,
+        '--stop-when-empty' => true,
+        '--max-time'        => 25,
+        '--tries'           => 3,
+        '--backoff'         => 5,
     ]);
 
     return response()->json(['status' => 'ok']);
