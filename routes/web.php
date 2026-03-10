@@ -57,13 +57,19 @@ Route::get('/debug/queue', function () {
         $results['redis_jobs_after_dispatch'] = 'FAILED: ' . $e->getMessage();
     }
 
-    // 4. Check QStash logs for recent deliveries
+    // 4. Manually test QStash publish (same code as the listener)
     try {
-        $response = \Illuminate\Support\Facades\Http::withToken(env('QSTASH_TOKEN'))
-            ->get('https://qstash.upstash.io/v2/events', ['count' => 5]);
-        $results['qstash_recent_events'] = $response->json();
+        $token = env('QSTASH_TOKEN');
+        $workerUrl = env('APP_URL') . '/worker?secret=' . urlencode(env('CRON_SECRET', ''));
+        $response = \Illuminate\Support\Facades\Http::withToken($token)
+            ->timeout(5)
+            ->post('https://qstash.upstash.io/v2/publish/' . urlencode($workerUrl));
+        $results['qstash_publish_test'] = [
+            'status' => $response->status(),
+            'body'   => $response->json(),
+        ];
     } catch (\Throwable $e) {
-        $results['qstash_recent_events'] = 'FAILED: ' . $e->getMessage();
+        $results['qstash_publish_test'] = 'FAILED: ' . $e->getMessage();
     }
 
     return response()->json($results);
