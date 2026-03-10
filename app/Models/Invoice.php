@@ -164,7 +164,13 @@ class Invoice extends Model
             'sent_at'         => null,
         ]);
 
-        SendInvoiceEmailJob::dispatchSync($this, $log);
+        try {
+            $pdfData = $this->generatePdf();
+            Mail::to($this->getRecipientEmails())->send(new InvoiceEmail($this, $pdfData));
+            $log->update(['status' => 'sent', 'sent_at' => now()]);
+        } catch (\Throwable $e) {
+            $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+        }
     }
 
     public function sendReminder(): void
@@ -181,7 +187,13 @@ class Invoice extends Model
             'sent_at'         => null,
         ]);
 
-        SendInvoiceReminderJob::dispatchSync($this, $log);
+        try {
+            $pdfData = $this->generatePdf();
+            Mail::to($this->getRecipientEmails())->send(new \App\Mail\InvoiceReminderEmail($this, $pdfData));
+            $log->update(['status' => 'sent', 'sent_at' => now()]);
+        } catch (\Throwable $e) {
+            $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+        }
     }
 
     public function markAsPaid(): void
@@ -228,7 +240,12 @@ class Invoice extends Model
             'sent_at'         => null,
         ]);
 
-        SendPaymentConfirmationJob::dispatchSync($payment, $log);
+        try {
+            Mail::to($this->customer->email)->send(new \App\Mail\PaymentReceivedEmail($payment));
+            $log->update(['status' => 'sent', 'sent_at' => now()]);
+        } catch (\Throwable $e) {
+            $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+        }
 
         return $payment;
     }

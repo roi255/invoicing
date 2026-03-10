@@ -110,7 +110,12 @@ class EmailLogsTable
                                 'sent_at'         => null,
                             ]);
 
-                            \App\Jobs\SendPaymentConfirmationJob::dispatchSync($payment, $log);
+                            try {
+                                \Illuminate\Support\Facades\Mail::to($invoice->customer->email)->send(new \App\Mail\PaymentReceivedEmail($payment));
+                                $log->update(['status' => 'sent', 'sent_at' => now()]);
+                            } catch (\Throwable $e) {
+                                $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+                            }
                         } elseif ($record->type === 'reminder') {
                             $record->invoice->sendReminder();
                         } else {
