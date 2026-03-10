@@ -37,10 +37,9 @@ Route::post('/worker', function (Request $request) {
         abort(401);
     }
 
-    $redis = app('redis')->connection();
-    $prefix = config('database.redis.options.prefix', '');
-    $queueKey = $prefix . 'queues:default';
-    $before = $redis->llen($queueKey);
+    // llen without prefix: predis applies prefix automatically
+    $redis  = app('redis')->connection();
+    $before = $redis->llen('queues:default');
 
     Artisan::call('queue:work', [
         '--stop-when-empty' => true,
@@ -49,17 +48,45 @@ Route::post('/worker', function (Request $request) {
         '--backoff'         => 0,
     ]);
 
-    $after = $redis->llen($queueKey);
+    $after = $redis->llen('queues:default');
 
     return response()->json([
-        'status'        => 'ok',
-        'queue_before'  => $before,
-        'queue_after'   => $after,
-        'output'        => Artisan::output(),
-        'redis_prefix'  => $prefix,
-        'queue_key'     => $queueKey,
+        'status'       => 'ok',
+        'queue_before' => $before,
+        'queue_after'  => $after,
+        'output'       => Artisan::output(),
     ]);
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
+Route::get('/debug/redis', function (Request $request) {
+    $secret = env('CRON_SECRET', '');
+
+    if (empty($secret) || $request->query('secret') !== $secret) {
+        abort(401);
+    }
+
+    $redis  = app('redis')->connection()->client();
+    $prefix = config('database.redis.options.prefix', '');
+
+    // Scan all keys that contain "queue"
+    $keys   = $redis->keys('*queue*');
+    $info   = [];
+
+    foreach ($keys as $key) {
+        $type = $redis->type($key);
+        $info[$key] = [
+            'type' => (string) $type,
+            'size' => $type == 'list' ? $redis->llen($key) : ($type == 'zset' ? $redis->zcard($key) : null),
+        ];
+    }
+
+    return response()->json([
+        'prefix'         => $prefix,
+        'queue_conn'     => config('queue.default'),
+        'redis_conn'     => config('queue.connections.redis.connection'),
+        'keys'           => $info,
+    ]);
+});
 
 Route::get('/debug/mail', function (Request $request) {
     $secret = env('CRON_SECRET', '');
