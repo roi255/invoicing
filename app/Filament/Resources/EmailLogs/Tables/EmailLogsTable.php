@@ -110,7 +110,7 @@ class EmailLogsTable
                                 'sent_at'         => null,
                             ]);
 
-                            \App\Jobs\SendPaymentConfirmationJob::dispatch($payment, $log);
+                            \App\Jobs\SendPaymentConfirmationJob::dispatchSync($payment, $log);
                         } elseif ($record->type === 'reminder') {
                             $record->invoice->sendReminder();
                         } else {

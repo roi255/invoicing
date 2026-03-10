@@ -164,7 +164,7 @@ class Invoice extends Model
             'sent_at'         => null,
         ]);
 
-        SendInvoiceEmailJob::dispatch($this, $log);
+        SendInvoiceEmailJob::dispatchSync($this, $log);
     }
 
     public function sendReminder(): void
@@ -181,7 +181,7 @@ class Invoice extends Model
             'sent_at'         => null,
         ]);
 
-        SendInvoiceReminderJob::dispatch($this, $log);
+        SendInvoiceReminderJob::dispatchSync($this, $log);
     }
 
     public function markAsPaid(): void
@@ -228,7 +228,7 @@ class Invoice extends Model
             'sent_at'         => null,
         ]);
 
-        SendPaymentConfirmationJob::dispatch($payment, $log);
+        SendPaymentConfirmationJob::dispatchSync($payment, $log);
 
         return $payment;
     }
