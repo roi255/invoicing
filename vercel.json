@@ -1,7 +1,6 @@
 {
     "version": 2,
     "framework": null,
-    "buildCommand": "composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs && php artisan migrate --force",
     "functions": {
         "api/index.php": { "runtime": "vercel-php@0.9.0" }
     },
