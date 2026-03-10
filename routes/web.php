@@ -37,24 +37,46 @@ Route::post('/worker', function (Request $request) {
         abort(401);
     }
 
-    // llen without prefix: predis applies prefix automatically
-    $redis  = app('redis')->connection();
-    $before = $redis->llen('queues:default');
+    $redis    = app('redis')->connection();
+    $before   = $redis->llen('queues:default');
+    $results  = [];
+    $processed = 0;
 
-    Artisan::call('queue:work', [
-        '--stop-when-empty' => true,
-        '--max-time'        => 50,
-        '--tries'           => 1,
-        '--backoff'         => 0,
-    ]);
+    while (true) {
+        $job = \Illuminate\Support\Facades\Queue::connection('redis')->pop('default');
+
+        if (! $job) {
+            break;
+        }
+
+        $processed++;
+
+        try {
+            $job->fire();
+            $results[] = ['job' => $job->getName(), 'status' => 'ok'];
+        } catch (\Throwable $e) {
+            $job->fail($e);
+            $results[] = [
+                'job'     => $job->getName(),
+                'status'  => 'failed',
+                'error'   => $e->getMessage(),
+                'file'    => $e->getFile() . ':' . $e->getLine(),
+            ];
+        }
+
+        if ($processed >= 10) {
+            break;
+        }
+    }
 
     $after = $redis->llen('queues:default');
 
     return response()->json([
-        'status'       => 'ok',
-        'queue_before' => $before,
-        'queue_after'  => $after,
-        'output'       => Artisan::output(),
+        'status'     => 'ok',
+        'before'     => $before,
+        'after'      => $after,
+        'processed'  => $processed,
+        'results'    => $results,
     ]);
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
@@ -65,27 +87,34 @@ Route::get('/debug/redis', function (Request $request) {
         abort(401);
     }
 
-    $redis  = app('redis')->connection()->client();
-    $prefix = config('database.redis.options.prefix', '');
-
-    // Scan all keys that contain "queue"
-    $keys   = $redis->keys('*queue*');
-    $info   = [];
-
-    foreach ($keys as $key) {
-        $type = $redis->type($key);
-        $info[$key] = [
-            'type' => (string) $type,
-            'size' => $type == 'list' ? $redis->llen($key) : ($type == 'zset' ? $redis->zcard($key) : null),
-        ];
-    }
+    $redis = app('redis')->connection();
 
     return response()->json([
-        'prefix'         => $prefix,
-        'queue_conn'     => config('queue.default'),
-        'redis_conn'     => config('queue.connections.redis.connection'),
-        'keys'           => $info,
+        'prefix'     => config('database.redis.options.prefix', ''),
+        'queue_conn' => config('queue.default'),
+        'redis_conn' => config('queue.connections.redis.connection'),
+        'default'    => $redis->llen('queues:default'),
+        'reserved'   => $redis->zcard('queues:default:reserved'),
+        'delayed'    => $redis->zcard('queues:default:delayed'),
+        'failed'     => $redis->llen('queues:failed'),
     ]);
+});
+
+Route::get('/debug/pdf', function (Request $request) {
+    $secret = env('CRON_SECRET', '');
+
+    if (empty($secret) || $request->query('secret') !== $secret) {
+        abort(401);
+    }
+
+    $invoice = Invoice::with(['customer', 'items.product'])->latest()->firstOrFail();
+
+    try {
+        $pdf = $invoice->generatePdf();
+        return response()->json(['status' => 'ok', 'size_bytes' => strlen($pdf)]);
+    } catch (\Throwable $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()], 500);
+    }
 });
 
 Route::get('/debug/mail', function (Request $request) {
