@@ -27,6 +27,43 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
+Route::get('/debug/queue', function () {
+    $results = [];
+
+    // Check env vars
+    $results['env'] = [
+        'QUEUE_CONNECTION' => env('QUEUE_CONNECTION'),
+        'REDIS_CLIENT'     => env('REDIS_CLIENT'),
+        'REDIS_URL_set'    => !empty(env('REDIS_URL')),
+        'QSTASH_TOKEN_set' => !empty(env('QSTASH_TOKEN')),
+        'CRON_SECRET_set'  => !empty(env('CRON_SECRET')),
+    ];
+
+    // Test Redis connection
+    try {
+        \Illuminate\Support\Facades\Redis::ping();
+        $results['redis'] = 'connected';
+    } catch (\Throwable $e) {
+        $results['redis'] = 'FAILED: ' . $e->getMessage();
+    }
+
+    // Test QStash
+    try {
+        $token = env('QSTASH_TOKEN');
+        if ($token) {
+            $response = \Illuminate\Support\Facades\Http::withToken($token)
+                ->get('https://qstash.upstash.io/v2/queues');
+            $results['qstash'] = $response->successful() ? 'connected' : 'FAILED: ' . $response->status();
+        } else {
+            $results['qstash'] = 'FAILED: no token';
+        }
+    } catch (\Throwable $e) {
+        $results['qstash'] = 'FAILED: ' . $e->getMessage();
+    }
+
+    return response()->json($results);
+});
+
 Route::post('/worker', function (Request $request) {
     $secret = env('CRON_SECRET', '');
 

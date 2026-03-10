@@ -48,7 +48,6 @@
 
         "DB_CONNECTION": "libsql",
         "QUEUE_CONNECTION": "redis",
-        "REDIS_CLIENT": "predis",
         "CACHE_DRIVER": "array",
         "LOG_CHANNEL": "stderr",
         "SESSION_DRIVER": "cookie"
