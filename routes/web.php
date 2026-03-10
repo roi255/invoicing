@@ -80,6 +80,36 @@ Route::post('/worker', function (Request $request) {
     ]);
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
+Route::get('/debug/dispatch', function (Request $request) {
+    $secret = env('CRON_SECRET', '');
+
+    if (empty($secret) || $request->query('secret') !== $secret) {
+        abort(401);
+    }
+
+    $redis  = app('redis')->connection();
+    $before = $redis->llen('queues:default');
+
+    $dispatchError = null;
+    try {
+        \Illuminate\Support\Facades\Queue::connection('redis')->push('test', ['ping' => true], 'default');
+    } catch (\Throwable $e) {
+        $dispatchError = $e->getMessage();
+    }
+
+    $after = $redis->llen('queues:default');
+
+    return response()->json([
+        'queue_driver'  => config('queue.default'),
+        'redis_url_set' => ! empty(env('REDIS_URL')),
+        'redis_host'    => config('database.redis.default.host'),
+        'before'        => $before,
+        'after'         => $after,
+        'job_in_redis'  => $after > $before,
+        'dispatch_error'=> $dispatchError,
+    ]);
+});
+
 Route::get('/debug/redis', function (Request $request) {
     $secret = env('CRON_SECRET', '');
 
