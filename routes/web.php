@@ -222,6 +222,44 @@ Route::get('/debug/worker-result', function (Request $request) {
     return response()->json($raw ? json_decode($raw) : ['no_result' => true]);
 });
 
+Route::get('/debug/email-count', function (Request $request) {
+    $secret = env('CRON_SECRET', '');
+    if (empty($secret) || $request->query('secret') !== $secret) {
+        abort(401);
+    }
+    return response()->json(['total' => SentEmail::count(), 'latest_id' => SentEmail::latest()->value('id'), 'latest_status' => SentEmail::latest()->value('status')]);
+});
+
+Route::get('/debug/update-test', function (Request $request) {
+    $secret = env('CRON_SECRET', '');
+
+    if (empty($secret) || $request->query('secret') !== $secret) {
+        abort(401);
+    }
+
+    // Test 1: does Eloquent update work on an existing record?
+    $log = SentEmail::latest()->first();
+
+    if (! $log) {
+        return response()->json(['error' => 'no sent_email records found']);
+    }
+
+    $originalStatus = $log->status;
+
+    try {
+        $rows = $log->update(['error_message' => 'update-test-' . now()->toIso8601String()]);
+        $log->refresh();
+        return response()->json([
+            'original_status'  => $originalStatus,
+            'update_returned'  => $rows,
+            'error_message_now' => $log->error_message,
+            'updated'          => str_starts_with((string) $log->error_message, 'update-test-'),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['update_error' => $e->getMessage()]);
+    }
+});
+
 Route::get('/debug/emails', function (Request $request) {
     $secret = env('CRON_SECRET', '');
 

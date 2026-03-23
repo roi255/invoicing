@@ -17,13 +17,13 @@ services:
         condition: service_healthy
 
   db:
-    image: mariadb:lts-alpine
+    image: mariadb:lts-ubi9
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}"
+      MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-root}"
       MARIADB_DATABASE: "${DB_DATABASE:-invoicing}"
-      MARIADB_USER: "${DB_USERNAME:-invoicing}"
-      MARIADB_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required}"
+      MARIADB_USER: "${DB_USERNAME:-root}"
+      MARIADB_PASSWORD: "${DB_PASSWORD:-root}"
     volumes:
       - db:/var/lib/mysql
     healthcheck:
